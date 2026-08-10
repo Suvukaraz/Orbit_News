@@ -1,5 +1,6 @@
-- [x] Update `.gitignore` to preserve run configurations
-- [x] Restore "Build Webapp" run configuration
-- [x] Restore "Sync Android" run configuration
-- [x] Fix SDK version in `android/variables.gradle`
-- [x] Verify project state
+- [x] Update `feedStore.ts` with filter/sort persistence
+- [x] Rework `textCleaner.ts` for entity decoding and clickable links
+- [x] Update `CommentItem.tsx` to render HTML and style links
+- [x] Update `CommentsScreen.tsx` to render HTML in post body
+- [x] Update `PostCard.tsx` to use `decodeEntities` for titles
+- [x] Verify persistence and link functionality

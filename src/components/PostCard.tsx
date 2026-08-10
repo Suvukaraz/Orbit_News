@@ -1,6 +1,8 @@
 import React from 'react';
 import type { IPost } from '../types';
 import { formatTimeAgo, formatNumber } from '../utils/timeFormatter';
+import { decodeEntities } from '../utils/textCleaner';
+import { openExternal } from '../utils/openExternal';
 import {
   MessageSquare,
   ExternalLink,
@@ -26,7 +28,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onClick, compact }) =>
 
   const handleOpenUrl = (e: React.MouseEvent) => {
     e.stopPropagation();
-    window.open(post.url, '_blank', 'noopener');
+    openExternal(post.url);
   };
 
   const domain = (() => {
@@ -52,7 +54,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onClick, compact }) =>
         </div>
 
         <div className="flex-1 min-w-0">
-          <h3 className="text-sm text-theme font-medium leading-snug line-clamp-2">{post.title}</h3>
+          <h3 className="text-sm text-theme font-medium leading-snug line-clamp-2">{decodeEntities(post.title)}</h3>
           <div className="flex items-center gap-2 mt-1 text-[11px] text-muted">
             <span style={{ color: sourceColorVar }}>{sourceIcon} {post.sourceLabel}</span>
             <span>·</span>
@@ -86,7 +88,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onClick, compact }) =>
 
       {/* Title */}
       <div className="px-4 pb-2">
-        <h2 className="text-[15px] leading-[1.45] font-semibold text-theme">{post.title}</h2>
+        <h2 className="text-[15px] leading-[1.45] font-semibold text-theme">{decodeEntities(post.title)}</h2>
         {domain && (
           <div className="flex items-center gap-1 mt-1.5">
             <Globe size={11} className="text-muted" />

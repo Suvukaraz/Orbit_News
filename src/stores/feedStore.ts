@@ -8,6 +8,8 @@ const INITIALIZED_KEY = 'infinity-feed-initialized';
 const START_PAGE_KEY = 'infinity-feed-start-page';
 const SEARCH_HISTORY_KEY = 'infinity-feed-search-history';
 const VIEW_MODE_KEY = 'infinity-feed-view-mode';
+const SOURCE_FILTER_KEY = 'infinity-feed-source-filter';
+const SORT_MODE_KEY = 'infinity-feed-sort-mode';
 
 function loadTheme(): ThemeId {
   try {
@@ -35,6 +37,14 @@ function loadInitialized(): boolean {
 
 function loadStartPage(): string {
   return localStorage.getItem(START_PAGE_KEY) || '/';
+}
+
+function loadSourceFilter(): SourceFilter {
+  return (localStorage.getItem(SOURCE_FILTER_KEY) as SourceFilter) || 'all';
+}
+
+function loadSortMode(): SortMode {
+  return (localStorage.getItem(SORT_MODE_KEY) as SortMode) || 'new';
 }
 
 export type ViewMode = 'auto' | 'mobile' | 'desktop';
@@ -117,12 +127,18 @@ interface FeedState {
 
 export const useFeedStore = create<FeedState>((set) => ({
   // Filter
-  sourceFilter: 'all',
-  setSourceFilter: (filter) => set({ sourceFilter: filter }),
+  sourceFilter: loadSourceFilter(),
+  setSourceFilter: (filter) => {
+    localStorage.setItem(SOURCE_FILTER_KEY, filter);
+    set({ sourceFilter: filter });
+  },
 
   // Sorting
-  sortMode: 'new',
-  setSortMode: (mode) => set({ sortMode: mode }),
+  sortMode: loadSortMode(),
+  setSortMode: (mode) => {
+    localStorage.setItem(SORT_MODE_KEY, mode);
+    set({ sortMode: mode });
+  },
 
   // Communities
   lemmyCommunities: loadCommunities(),

@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import type { IComment } from '../types';
 import { formatTimeAgo } from '../utils/timeFormatter';
 import { ChevronDown, ChevronUp } from 'lucide-react';
+import { renderContentHTML } from '../utils/textCleaner';
+import { handleContentClick } from '../utils/openExternal';
 
 interface CommentItemProps {
   comment: IComment;
@@ -30,19 +32,7 @@ export const CommentItem: React.FC<CommentItemProps> = ({ comment, maxDepthToSho
   const visualIndent = comment.depth > 0 ? 8 : 0;
   const isDeep = comment.depth >= 5;
 
-  // Strip HTML tags from HN comments
-  const cleanBody = comment.body
-    .replace(/<p>/g, '\n\n')
-    .replace(/<br\s*\/?>/g, '\n')
-    .replace(/<a[^>]*href="([^"]*)"[^>]*>([^<]*)<\/a>/g, '$2 ($1)')
-    .replace(/<[^>]*>/g, '')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#x27;/g, "'")
-    .replace(/&#39;/g, "'")
-    .trim();
+  const cleanBody = renderContentHTML(comment.body, comment.sourceType);
 
   if (comment.depth > maxDepthToShow) return null;
 
@@ -95,9 +85,11 @@ export const CommentItem: React.FC<CommentItemProps> = ({ comment, maxDepthToSho
         {!collapsed && (
           <>
             {/* Comment body */}
-            <div className="mt-1 text-[13px] leading-[1.5] text-theme whitespace-pre-wrap break-words opacity-95">
-              {cleanBody}
-            </div>
+            <div
+              className="mt-1 text-[13px] leading-[1.5] text-theme break-words opacity-95 comment-content"
+              onClick={handleContentClick}
+              dangerouslySetInnerHTML={{ __html: cleanBody }}
+            />
 
             {/* Children */}
             {comment.children.length > 0 && (

@@ -7,6 +7,8 @@ import { CommentItem } from '../components/CommentItem';
 import { OrbitLogo } from '../components/OrbitLogo';
 import { useIsDesktop } from '../App';
 import { formatTimeAgo, formatNumber } from '../utils/timeFormatter';
+import { renderContentHTML, decodeEntities } from '../utils/textCleaner';
+import { openExternal, handleContentClick } from '../utils/openExternal';
 import type { IPost, IComment } from '../types';
 import {
   ArrowLeft,
@@ -161,7 +163,7 @@ export const CommentsScreen: React.FC = () => {
           <div className="flex justify-end px-2">
             {post && (
               <button
-                onClick={() => window.open(post.url, '_blank', 'noopener')}
+                onClick={() => openExternal(post.url)}
                 className="p-1.5 text-muted hover:text-theme hover-surface rounded-xl transition-colors"
               >
                 <ExternalLink size={18} />
@@ -192,7 +194,7 @@ export const CommentsScreen: React.FC = () => {
             </div>
 
             {/* Title */}
-            <h2 className="text-lg font-bold text-theme leading-snug mb-2">{post.title}</h2>
+            <h2 className="text-lg font-bold text-theme leading-snug mb-2">{decodeEntities(post.title)}</h2>
 
             {/* Domain */}
             {domain && (
@@ -202,6 +204,10 @@ export const CommentsScreen: React.FC = () => {
                   href={post.url}
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    openExternal(post.url);
+                  }}
                   className="text-[12px] text-accent transition-colors truncate"
                 >
                   {domain}
@@ -211,21 +217,11 @@ export const CommentsScreen: React.FC = () => {
 
             {/* Body (if any) */}
             {post.body && (
-              <div className="text-sm text-muted leading-relaxed mb-3 whitespace-pre-wrap break-words">
-                {post.body
-                  .replace(/<p>/g, '\n\n')
-                  .replace(/<br\s*\/?>/g, '\n')
-                  .replace(/<a[^>]*href="([^"]*)"[^>]*>([^<]*)<\/a>/g, '$2 ($1)')
-                  .replace(/<[^>]*>/g, '')
-                  .replace(/&amp;/g, '&')
-                  .replace(/&lt;/g, '<')
-                  .replace(/&gt;/g, '>')
-                  .replace(/&quot;/g, '"')
-                  .replace(/&#x27;/g, "'")
-                  .replace(/&#39;/g, "'")
-                  .trim()
-                }
-              </div>
+              <div
+                className="text-sm text-muted leading-relaxed mb-3 break-words opacity-95 comment-content"
+                onClick={handleContentClick}
+                dangerouslySetInnerHTML={{ __html: renderContentHTML(post.body, post.sourceType) }}
+              />
             )}
 
             {/* Thumbnail */}
