@@ -1,0 +1,5 @@
+- [x] Update `.gitignore` to preserve run configurations
+- [x] Restore "Build Webapp" run configuration
+- [x] Restore "Sync Android" run configuration
+- [x] Fix SDK version in `android/variables.gradle`
+- [x] Verify project state

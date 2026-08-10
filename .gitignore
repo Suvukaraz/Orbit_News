@@ -18,6 +18,7 @@ android/app/src/main/assets/capacitor.plugins.json
 
 # IDE and operating-system files
 .idea/
+!.idea/runConfigurations/
 .vscode/
 .fleet/
 *.iml
