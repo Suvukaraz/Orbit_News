@@ -298,7 +298,7 @@ export const SettingsScreen: React.FC = () => {
                       </div>
                       <button
                         onClick={() => deleteLemmyCommunity(c.filterKey)}
-                        className="p-2 text-muted hover:text-red-400 hover:bg-red-400/10 rounded-xl transition-all opacity-0 group-hover:opacity-100"
+                        className="p-2 text-muted hover:text-red-400 hover:bg-red-400/10 rounded-xl transition-all"
                       >
                         <Trash2 size={14} />
                       </button>

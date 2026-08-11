@@ -152,16 +152,16 @@ export async function searchHN(
   page: number = 0,
   sortBy: string = 'relevance',
   timeFilter: string = 'all'
-): Promise<IPost[]> {
+): Promise<{ posts: IPost[]; nbPages: number }> {
   const normalizedQuery = query.trim();
-  if (!normalizedQuery) return [];
+  if (!normalizedQuery) return { posts: [], nbPages: 0 };
 
   const endpoint = sortBy === 'newest' ? 'search_by_date' : 'search';
   const params: AlgoliaSearchParams = {
     query: normalizedQuery,
     tags: 'story',
     page,
-    hitsPerPage: 20,
+    hitsPerPage: 100,
   };
 
   if (timeFilter !== 'all') {
@@ -179,7 +179,7 @@ export async function searchHN(
 
   const { data } = await axios.get<AlgoliaResponse>(`${ALGOLIA_BASE}/${endpoint}`, { params });
 
-  return data.hits.flatMap(hit => {
+  const posts = data.hits.flatMap(hit => {
     const hnId = Number.parseInt(hit.objectID, 10);
     if (!Number.isFinite(hnId)) return [];
 
@@ -197,4 +197,6 @@ export async function searchHN(
       voteState: 'none' as const,
     }];
   });
+
+  return { posts, nbPages: data.nbPages };
 }

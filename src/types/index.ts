@@ -45,13 +45,13 @@ export interface LemmyCommunityConfig {
 }
 
 export const DEFAULT_LEMMY_COMMUNITIES: LemmyCommunityConfig[] = [
-  { instance: 'lemmy.world', community: 'technology', label: 'technology@lemmy.world', filterKey: 'lemmy:technology@lemmy.world' },
-  { instance: 'lemmy.world', community: 'opensource', label: 'opensource@lemmy.world', filterKey: 'lemmy:opensource@lemmy.world' },
-  { instance: 'lemmy.world', community: 'linux', label: 'linux@lemmy.world', filterKey: 'lemmy:linux@lemmy.world' },
-  { instance: 'lemmy.world', community: 'hardware', label: 'Hardware@lemmy.world', filterKey: 'lemmy:hardware@lemmy.world' },
+  { instance: 'lemmy.world', community: 'artificialintelligence', label: 'artificialintelligence@lemmy.world', filterKey: 'lemmy:artificialintelligence@lemmy.world' },
   { instance: 'lemmy.world', community: 'games', label: 'games@lemmy.world', filterKey: 'lemmy:games@lemmy.world' },
+  { instance: 'lemmy.world', community: 'hardware', label: 'Hardware@lemmy.world', filterKey: 'lemmy:hardware@lemmy.world' },
+  { instance: 'lemmy.world', community: 'linux', label: 'linux@lemmy.world', filterKey: 'lemmy:linux@lemmy.world' },
+  { instance: 'lemmy.world', community: 'opensource', label: 'opensource@lemmy.world', filterKey: 'lemmy:opensource@lemmy.world' },
   { instance: 'lemmy.world', community: 'pcgaming', label: 'pcgaming@lemmy.world', filterKey: 'lemmy:pcgaming@lemmy.world' },
-  { instance: 'programming.dev', community: 'ai', label: 'AI@programming.dev', filterKey: 'lemmy:ai@programming.dev' },
+  { instance: 'lemmy.world', community: 'technology', label: 'technology@lemmy.world', filterKey: 'lemmy:technology@lemmy.world' },
 ];
 
 // ----- Sorting -----

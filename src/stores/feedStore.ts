@@ -11,6 +11,11 @@ const VIEW_MODE_KEY = 'infinity-feed-view-mode';
 const SOURCE_FILTER_KEY = 'infinity-feed-source-filter';
 const SORT_MODE_KEY = 'infinity-feed-sort-mode';
 
+const SEARCH_QUERY_KEY = 'infinity-feed-search-query';
+const SEARCH_SORT_KEY = 'infinity-feed-search-sort';
+const SEARCH_TIME_KEY = 'infinity-feed-search-time';
+const SEARCH_SCOPE_KEY = 'infinity-feed-search-scope';
+
 function loadTheme(): ThemeId {
   try {
     const stored = localStorage.getItem(THEME_STORAGE_KEY);
@@ -24,7 +29,10 @@ function loadTheme(): ThemeId {
 function loadCommunities(): LemmyCommunityConfig[] {
   try {
     const stored = localStorage.getItem(COMMUNITIES_STORAGE_KEY);
-    if (stored) return JSON.parse(stored);
+    if (stored) {
+      const parsed = JSON.parse(stored) as LemmyCommunityConfig[];
+      return parsed.sort((a, b) => a.community.localeCompare(b.community));
+    }
   } catch {
     // ignore
   }
@@ -69,6 +77,22 @@ function loadSearchHistory(): SearchHistoryItem[] {
     // ignore
   }
   return [];
+}
+
+function loadSearchQuery(): string {
+  return localStorage.getItem(SEARCH_QUERY_KEY) || '';
+}
+
+function loadSearchSort(): string {
+  return localStorage.getItem(SEARCH_SORT_KEY) || 'relevance';
+}
+
+function loadSearchTime(): string {
+  return localStorage.getItem(SEARCH_TIME_KEY) || 'all';
+}
+
+function loadSearchScope(): string {
+  return localStorage.getItem(SEARCH_SCOPE_KEY) || 'all';
 }
 
 interface FeedState {
@@ -123,6 +147,16 @@ interface FeedState {
   searchHistory: SearchHistoryItem[];
   addToSearchHistory: (item: Omit<SearchHistoryItem, 'timestamp'>) => void;
   clearSearchHistory: () => void;
+
+  // Search State (for restoration)
+  searchQuery: string;
+  setSearchQuery: (query: string) => void;
+  searchSortBy: string;
+  setSearchSortBy: (sort: string) => void;
+  searchTimeFilter: string;
+  setSearchTimeFilter: (filter: string) => void;
+  searchScope: string;
+  setSearchScope: (scope: string) => void;
 }
 
 export const useFeedStore = create<FeedState>((set) => ({
@@ -143,7 +177,9 @@ export const useFeedStore = create<FeedState>((set) => ({
   // Communities
   lemmyCommunities: loadCommunities(),
   addLemmyCommunity: (community) => set((s) => {
-    const newList = [...s.lemmyCommunities, community];
+    const newList = [...s.lemmyCommunities, community].sort((a, b) =>
+      a.community.localeCompare(b.community)
+    );
     localStorage.setItem(COMMUNITIES_STORAGE_KEY, JSON.stringify(newList));
     return { lemmyCommunities: newList };
   }),
@@ -240,4 +276,26 @@ export const useFeedStore = create<FeedState>((set) => ({
     localStorage.removeItem(SEARCH_HISTORY_KEY);
     return { searchHistory: [] };
   }),
+
+  // Search State
+  searchQuery: loadSearchQuery(),
+  setSearchQuery: (query) => {
+    localStorage.setItem(SEARCH_QUERY_KEY, query);
+    set({ searchQuery: query });
+  },
+  searchSortBy: loadSearchSort(),
+  setSearchSortBy: (sort) => {
+    localStorage.setItem(SEARCH_SORT_KEY, sort);
+    set({ searchSortBy: sort });
+  },
+  searchTimeFilter: loadSearchTime(),
+  setSearchTimeFilter: (filter) => {
+    localStorage.setItem(SEARCH_TIME_KEY, filter);
+    set({ searchTimeFilter: filter });
+  },
+  searchScope: loadSearchScope(),
+  setSearchScope: (scope) => {
+    localStorage.setItem(SEARCH_SCOPE_KEY, scope);
+    set({ searchScope: scope });
+  },
 }));

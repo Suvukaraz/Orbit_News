@@ -1,6 +1,6 @@
-﻿import React, { useState, useCallback, useRef, useEffect } from 'react';
+﻿import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
 import { searchHN } from '../services/hnApi';
 import { searchLemmy } from '../services/lemmyApi';
 import { PostCard } from '../components/PostCard';
@@ -16,6 +16,7 @@ type SearchScope = SourceFilter;
 interface SearchResult {
   posts: IPost[];
   failedSources: string[];
+  nextPage?: number;
 }
 
 async function searchAllSources(
@@ -23,7 +24,8 @@ async function searchAllSources(
   sortBy: SearchSort,
   timeFilter: TimeFilter,
   communities: LemmyCommunityConfig[],
-  scope: SearchScope
+  scope: SearchScope,
+  page: number = 0
 ): Promise<SearchResult> {
   const normalizedQuery = query.trim();
   if (!normalizedQuery) return { posts: [], failedSources: [] };
@@ -31,23 +33,32 @@ async function searchAllSources(
   const selectedCommunities = scope === 'all'
     ? communities
     : communities.filter(community => community.filterKey === scope);
+
   const requests = [
     ...(scope === 'all' || scope === 'hn'
-      ? [{ name: 'Hacker News', request: searchHN(normalizedQuery, 0, sortBy, timeFilter) }]
+      ? [{ name: 'Hacker News', request: searchHN(normalizedQuery, page, sortBy, timeFilter) }]
       : []),
     ...selectedCommunities.map(community => ({
       name: `Lemmy (${community.label})`,
-      request: searchLemmy(community.instance, normalizedQuery, 1, sortBy, community.community),
+      request: searchLemmy(community.instance, normalizedQuery, page + 1, sortBy, community.community),
     })),
   ];
 
   const results = await Promise.allSettled(requests.map(source => source.request));
   const all: IPost[] = [];
   const failedSources: string[] = [];
+  let hnNbPages = 0;
 
   for (const [index, result] of results.entries()) {
     if (result.status === 'fulfilled') {
-      all.push(...result.value);
+      const value = result.value;
+      if (requests[index].name === 'Hacker News') {
+        const hnResult = value as { posts: IPost[]; nbPages: number };
+        all.push(...hnResult.posts);
+        hnNbPages = hnResult.nbPages;
+      } else {
+        all.push(...(value as IPost[]));
+      }
     } else {
       failedSources.push(requests[index].name);
     }
@@ -72,7 +83,19 @@ async function searchAllSources(
     unique.sort((a, b) => b.commentCount - a.commentCount);
   }
 
-  return { posts: unique, failedSources };
+  // Determine if there is a next page
+  // For HN, we have nbPages. For Lemmy, we just check if we got results (simplified).
+  // If we are in "all" scope, we continue as long as one source has more.
+  const hasMoreHN = scope === 'hn' || scope === 'all' ? page + 1 < hnNbPages : false;
+  const hasMoreLemmy = (scope !== 'hn') && all.some(p => p.sourceType === 'lemmy'); // Simplified check
+
+  const hasNext = hasMoreHN || hasMoreLemmy;
+
+  return {
+    posts: unique,
+    failedSources,
+    nextPage: hasNext ? page + 1 : undefined
+  };
 }
 
 export const SearchScreen: React.FC = () => {
@@ -85,58 +108,104 @@ export const SearchScreen: React.FC = () => {
     setScrollPosition,
     searchHistory,
     addToSearchHistory,
-    clearSearchHistory
+    clearSearchHistory,
+    searchQuery,
+    setSearchQuery,
+    searchSortBy,
+    setSearchSortBy,
+    searchTimeFilter,
+    setSearchTimeFilter,
+    searchScope,
+    setSearchScope
   } = useFeedStore();
 
-  const [query, setQuery] = useState('');
-  const [debouncedQuery, setDebouncedQuery] = useState('');
-  const [sortBy, setSortBy] = useState<SearchSort>('relevance');
-  const [timeFilter, setTimeFilter] = useState<TimeFilter>('all');
+  const [inputValue, setInputValue] = useState(searchQuery);
+  const [debouncedQuery, setDebouncedQuery] = useState(searchQuery);
   const [showFilters, setShowFilters] = useState(false);
-  const [searchScope, setSearchScope] = useState<SearchScope>('all');
 
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const observerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      setDebouncedQuery(query.trim());
+      const trimmed = inputValue.trim();
+      setDebouncedQuery(trimmed);
+      setSearchQuery(trimmed);
     }, 500);
 
     return () => window.clearTimeout(timer);
-  }, [query]);
+  }, [inputValue, setSearchQuery]);
 
   useEffect(() => {
     if (searchScope !== 'all' && searchScope !== 'hn' && !lemmyCommunities.some(c => c.filterKey === searchScope)) {
       setSearchScope('all');
     }
-  }, [lemmyCommunities, searchScope]);
+  }, [lemmyCommunities, searchScope, setSearchScope]);
 
   const handleQueryChange = useCallback((value: string) => {
-    setQuery(value);
+    setInputValue(value);
   }, []);
 
   const normalizedDebouncedQuery = debouncedQuery.trim();
 
-  const { data: searchResults, isLoading, isError, refetch } = useQuery<SearchResult>({
-    queryKey: ['search', normalizedDebouncedQuery, sortBy, timeFilter, searchScope, lemmyCommunities],
-    queryFn: () => searchAllSources(debouncedQuery, sortBy, timeFilter, lemmyCommunities, searchScope),
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+    isError,
+    refetch,
+  } = useInfiniteQuery<SearchResult>({
+    queryKey: ['search', normalizedDebouncedQuery, searchSortBy, searchTimeFilter, searchScope, lemmyCommunities],
+    queryFn: ({ pageParam = 0 }) =>
+      searchAllSources(normalizedDebouncedQuery, searchSortBy as SearchSort, searchTimeFilter as TimeFilter, lemmyCommunities, searchScope as SearchScope, pageParam as number),
     enabled: normalizedDebouncedQuery.length >= 2,
     staleTime: 60 * 1000,
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) => lastPage.nextPage,
   });
 
   useEffect(() => {
     if (normalizedDebouncedQuery.length >= 2) {
       addToSearchHistory({
         query: normalizedDebouncedQuery,
-        sortBy,
-        timeFilter,
+        sortBy: searchSortBy,
+        timeFilter: searchTimeFilter,
         searchScope
       });
     }
-  }, [normalizedDebouncedQuery, sortBy, timeFilter, searchScope, addToSearchHistory]);
+  }, [normalizedDebouncedQuery, searchSortBy, searchTimeFilter, searchScope, addToSearchHistory]);
 
-  const results = searchResults?.posts || [];
+  const results = useMemo(() => {
+    if (!data?.pages) return [];
+    const all = data.pages.flatMap(page => page.posts);
+    const seen = new Set<string>();
+    return all.filter(p => {
+      if (seen.has(p.id)) return false;
+      seen.add(p.id);
+      return true;
+    });
+  }, [data]);
+
+  // Infinite scroll observer
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
+          fetchNextPage();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (observerRef.current) {
+      observer.observe(observerRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
   // Restore scroll position
   useEffect(() => {
@@ -198,16 +267,16 @@ export const SearchScreen: React.FC = () => {
               <input
                 ref={inputRef}
                 type="text"
-                value={query}
+                value={inputValue}
                 onChange={(e) => handleQueryChange(e.target.value)}
                 placeholder="Search..."
                 aria-label="Search Hacker News and Lemmy"
                 className="w-full pl-10 pr-10 py-2.5 bg-surface border border-theme rounded-xl text-theme text-sm placeholder:text-muted focus:outline-none focus:ring-2 transition-all"
                 style={{ '--tw-ring-color': 'var(--c-accent)' } as React.CSSProperties}
               />
-              {query && (
+              {inputValue && (
                 <button
-                  onClick={() => { setQuery(''); setDebouncedQuery(''); }}
+                  onClick={() => { setInputValue(''); setDebouncedQuery(''); setSearchQuery(''); }}
                   aria-label="Clear search"
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-theme"
                 >
@@ -235,8 +304,8 @@ export const SearchScreen: React.FC = () => {
                   </label>
                   <div className="relative">
                     <select
-                      value={timeFilter}
-                      onChange={(e) => setTimeFilter(e.target.value as TimeFilter)}
+                      value={searchTimeFilter}
+                      onChange={(e) => setSearchTimeFilter(e.target.value as TimeFilter)}
                       className="w-full appearance-none bg-surface border border-theme rounded-lg px-3 py-1.5 text-xs text-theme focus:outline-none"
                     >
                       {timeOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -250,8 +319,8 @@ export const SearchScreen: React.FC = () => {
                   </label>
                   <div className="relative">
                     <select
-                      value={sortBy}
-                      onChange={(e) => setSortBy(e.target.value as SearchSort)}
+                      value={searchSortBy}
+                      onChange={(e) => setSearchSortBy(e.target.value as SearchSort)}
                       className="w-full appearance-none bg-surface border border-theme rounded-lg px-3 py-1.5 text-xs text-theme focus:outline-none"
                     >
                       {sortOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -317,10 +386,10 @@ export const SearchScreen: React.FC = () => {
                     <button
                       key={item.query + item.timestamp + idx}
                       onClick={() => {
-                        setQuery(item.query);
+                        setInputValue(item.query);
                         setDebouncedQuery(item.query);
-                        setSortBy(item.sortBy as SearchSort);
-                        setTimeFilter(item.timeFilter as TimeFilter);
+                        setSearchSortBy(item.sortBy as SearchSort);
+                        setSearchTimeFilter(item.timeFilter as TimeFilter);
                         setSearchScope(item.searchScope as SearchScope);
                       }}
                       className="w-full flex items-center justify-between px-4 py-3 bg-surface hover-surface border border-theme rounded-xl transition-all group"
@@ -356,11 +425,11 @@ export const SearchScreen: React.FC = () => {
             </div>
           )}
 
-          {!isLoading && !isError && searchResults?.failedSources.length ? (
+          {!isLoading && !isError && data?.pages?.[0]?.failedSources?.length ? (
             <div className="mx-4 mt-3 flex items-start gap-2 rounded-xl border border-amber-400/20 bg-amber-400/10 px-3 py-2 text-[11px] text-amber-200">
               <AlertTriangle size={14} className="mt-0.5 shrink-0" />
               <span>
-                Unable to search {searchResults.failedSources.join(', ')}. Showing available results.
+                Unable to search {data.pages[0].failedSources.join(', ')}. Showing available results.
               </span>
             </div>
           ) : null}
