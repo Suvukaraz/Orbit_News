@@ -20,14 +20,21 @@ const escapeAttr = (text: string): string =>
  * Runs iteratively (max 3 passes) to fix double-encoded entities
  * like "&amp;#x27;" that Hacker News sometimes returns.
  */
+let decodingTextArea: HTMLTextAreaElement | null = null;
+
 const decodeTextEntities = (text: string): string => {
+  if (!text || !text.includes('&')) return text;
+
+  if (!decodingTextArea) {
+    decodingTextArea = document.createElement('textarea');
+  }
+
   let result = text;
   for (let i = 0; i < 3; i++) {
+    decodingTextArea.innerHTML = result;
+    if (decodingTextArea.value === result) break;
+    result = decodingTextArea.value;
     if (!result.includes('&')) break;
-    const ta = document.createElement('textarea');
-    ta.innerHTML = result;
-    if (ta.value === result) break;
-    result = ta.value;
   }
   return result;
 };

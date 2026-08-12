@@ -16,7 +16,7 @@ interface PostCardProps {
   compact?: boolean;
 }
 
-export const PostCard: React.FC<PostCardProps> = ({ post, onClick, compact }) => {
+export const PostCard = React.memo(({ post, onClick, compact }: PostCardProps) => {
   const handleShare = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (navigator.share) {
@@ -133,4 +133,4 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onClick, compact }) =>
       </div>
     </div>
   );
-};
+});

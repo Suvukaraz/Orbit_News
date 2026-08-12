@@ -457,6 +457,16 @@ export const SearchScreen: React.FC = () => {
                   />
                 ))}
               </div>
+
+              {/* Infinite scroll trigger */}
+              <div ref={observerRef} className="h-20 flex items-center justify-center">
+                {isFetchingNextPage && (
+                  <Loader2 size={24} className="text-accent animate-spin" />
+                )}
+                {!hasNextPage && results.length > 0 && (
+                  <p className="text-muted text-xs opacity-60">You've reached the end</p>
+                )}
+              </div>
             </>
           )}
         </div>
