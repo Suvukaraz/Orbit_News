@@ -19,8 +19,8 @@ React 19, TypeScript, Vite, Tailwind CSS 4, Zustand, TanStack Query, and Capacit
 
 Download the [latest release](https://github.com/Suvukaraz/Orbit_News/releases/latest) to get:
 
-- `orbit-news-v0.7.5-debug.apk` - Android debug build
-- `index.html` - self-contained web build for static hosting
+- `orbit-news-v0.8.0-debug.apk` - Android debug build
+- `orbit-news-v0.8.0.html ` - self-contained web build for static hosting
 
 The APK is a **debug build** and is not signed with a production certificate. Android may require permission to install apps from unknown sources.
 
